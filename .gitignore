@@ -1,0 +1,4 @@
+.idea
+.venv
+envs.sh
+tg_biblebot/__pycache__
