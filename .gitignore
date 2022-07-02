@@ -2,3 +2,4 @@
 .venv
 envs.sh
 tg_biblebot/__pycache__
+tg_biblebot/kjv_old.tsv
