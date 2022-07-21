@@ -83,6 +83,6 @@ def fetch_verses(input):
 
     message = ''
     for i, j in zip(verses.verse, verses.text):
-        message += f'<b>{i}</b>    {j}\n'
+        message += f'<b>{i}.</b> {j}\n'
     
     return message
