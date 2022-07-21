@@ -2,10 +2,9 @@
 import re
 import pandas as pd
 
-def parse_ref(query):
+kjv = pd.read_csv('kjv.tsv', sep='\t', index_col='index') # load KJV into a pandas dataframe
 
-    kjv = pd.from_csv('kjv.tsv', sep='\t') # load KJV into a pandas dataframe
-    kjv.columns = ['book', 'book_abr', 'book_num', 'chapter', 'verse', 'text']
+def regex(input):
 
     ref = {
         'book' : None,
@@ -20,46 +19,70 @@ def parse_ref(query):
     # 3. <book>:?<chapter>:<verse>-<verse>
 
     # find book
-    x = re.search('^[1-9]?[a-zA-Z ]+', query)
+    x = re.search('^[1-9]?[a-zA-Z ]+', input)
     if x:
         ref['book'] = x.group().lower().rstrip()
-        print('Book: ' + ref['book'])
-        query = query[x.span()[1]:]
+        input = input[x.span()[1]:]
     else:
-        return(False)
+        return('Invalid syntax: book name')
 
     # find chapter
-    query = re.sub('^:', '', query).lstrip()
-    x = re.search('^[1-9]+[0-9]*', query)
+    input = re.sub('^:', '', input).lstrip()
+    x = re.search('^[1-9]+[0-9]*', input)
     if x:
-        ref['chapter'] = x.group()
-        print('Chapter: ' + ref['chapter'])
-        query = query[x.span()[1]:].lstrip()
+        ref['chapter'] = int(x.group())
+        input = input[x.span()[1]:].lstrip()
     else:
-        return('You need to specify a chapter')
+        return('Invalid syntax: chapter number')
     
     # find starting verse
-    query = re.sub('^:', '', query).lstrip()
-    x = re.search('^[1-9]+[0-9]*', query)
+    input = re.sub('^:', '', input).lstrip()
+    x = re.search('^[1-9]+[0-9]*', input)
     if x: #case 2, 3
-        ref['verse'] = x.group()
+        ref['verse'] = int(x.group())
         ref['exact'] = True
-        print('Start verse: ' + ref['verse'])
-        query = query[x.span()[1]:].lstrip()
-    elif query == '': # case 1
+        input = input[x.span()[1]:].lstrip()
+    elif input == '': # case 1
         ref['exact'] = False
         return ref
     else:
-        return(False)
+        return('Invalid syntax: verse number')
 
-    x = re.search('^-[1-9]+[0-9]*$', query)
+    # find ending verse
+    x = re.search('^-[1-9]+[0-9]*$', input)
     if x: # case 3
-        ref['verse_end'] = re.sub('^-', '', x.group())
-        print('End verse: ' + ref['verse_end'])
+        ref['verse_end'] = int(re.sub('^-', '', x.group()))
         return ref
-    elif query == '': # case 2
+    elif input == '': # case 2
         ref['verse_end'] = ref['verse']
-        print('End verse: ' + ref['verse_end'])
         return ref
     else:
-        return(False)
+        return('Invalid syntax: verse number')
+
+def fetch_verses(input):
+    ref = regex(input)
+    if type(ref) != dict:
+        return ref
+
+    book_num = 0
+    if kjv.book_abr.eq(ref['book']).any():
+        book_num = kjv[kjv.book_abr == ref['book']].iloc[0].book_num
+    elif kjv.book.eq(ref['book']).any():
+        book_num = kjv[kjv.book == ref['book']].iloc[0].book_num
+    else:
+        return 'Invalid book name'
+    df = kjv[kjv.book_num == book_num]
+
+    if not df.chapter.eq(ref['chapter']).any():
+        return 'Invalid chapter'
+    df = df[df.chapter == ref['chapter']]
+
+    if not (df.verse.eq(ref['verse']).any() & df.verse.eq(ref['verse_end']).any()):
+        return 'Invalid verse selection'
+    verses = df[(df.verse >= ref['verse']) & (df.verse <= ref['verse_end'])]
+
+    message = ''
+    for i, j in zip(verses.verse, verses.text):
+        message += f'<b>{i}.</b> {j}\n'
+    
+    return message
