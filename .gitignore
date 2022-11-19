@@ -1,5 +1,7 @@
 .idea
+__pycache__
 .venv
+venv
 envs.sh
 tg_biblebot/__pycache__
 tg_biblebot/kjv_old.tsv
