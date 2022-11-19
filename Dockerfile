@@ -3,7 +3,11 @@ FROM python:3.11
 # Copy files to image
 ENV APP_HOME /app
 WORKDIR $APP_HOME
-COPY . ./
+COPY bible.py ./
+COPY main.py ./
+COPY telegram.py ./
+COPY requirements.txt ./
+COPY kjv.tsv ./
 
 # Install production dependencies
 RUN pip install --no-cache-dir -r requirements.txt
